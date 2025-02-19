@@ -44,26 +44,28 @@
 #include <PDM.h>
 #include <bluefruit.h>
 
-Adafruit_APDS9960 apds9960; // proximity, light, color, gesture
-Adafruit_BMP280 bmp280;     // temperautre, barometric pressure
+//Adafruit_APDS9960 apds9960; // proximity, light, color, gesture
+//Adafruit_BMP280 bmp280;     // temperautre, barometric pressure
 Adafruit_LIS3MDL lis3mdl;   // magnetometer
 Adafruit_LSM6DS3TRC lsm6ds3trc; // accelerometer, gyroscope
 Adafruit_LSM6DS33 lsm6ds33;
-Adafruit_SHT31 sht30;       // humidity
+//Adafruit_SHT31 sht30;       // humidity
 
 BLEDis bledis;
 BLEHidAdafruit blehid;
 
-#define MOVE_STEP    1
+#define SMALL_MOVE_STEP     1
+#define MEDIUM_MOVE_STEP    4
+#define LARGE_MOVE_STEP     9
 
-uint8_t proximity;
-uint16_t r, g, b, c;
-float temperature, pressure, altitude;
+//uint8_t proximity;
+//uint16_t r, g, b, c;
+//float temperature, pressure, altitude;
 float magnetic_x, magnetic_y, magnetic_z;
 float accel_x, accel_y, accel_z;
 float gyro_x, gyro_y, gyro_z;
-float humidity;
-int32_t mic;
+//float humidity;
+//int32_t mic;
 int x_step, y_step;
 long int accel_array[6];
 long int check_array[6]={0.00, 0.00, 0.00, 0.00, 0.00, 0.00};
@@ -77,13 +79,13 @@ bool new_rev = true;
 void setup(void) {
   Serial.begin(115200);
   while ( !Serial ) delay(10);   // for nrf52840 with native usb
-  Serial.println("Feather Sense Sensor Demo");
+  //Serial.println("Feather Sense Sensor Demo");
 
   // initialize the sensors
-  apds9960.begin();
-  apds9960.enableProximity(true);
-  apds9960.enableColor(true);
-  bmp280.begin();
+  //apds9960.begin();
+  //apds9960.enableProximity(true);
+  //apds9960.enableColor(true);
+  //bmp280.begin();
   lis3mdl.begin_I2C();
   lsm6ds33.begin_I2C();
   // check for readings from LSM6DS33
@@ -108,7 +110,7 @@ void setup(void) {
   if (new_rev) {
     lsm6ds3trc.begin_I2C();
   }
-  sht30.begin();
+  //sht30.begin();
   PDM.onReceive(onPDMdata);
   PDM.begin(1, 16000);
 
@@ -143,9 +145,9 @@ void loop(void) {
   // altitude = bmp280.readAltitude(1013.25);
 
   lis3mdl.read();
-  magnetic_x = lis3mdl.x;
-  magnetic_y = lis3mdl.y;
-  magnetic_z = lis3mdl.z;
+  //magnetic_x = lis3mdl.x;
+  //magnetic_y = lis3mdl.y;
+  //magnetic_z = lis3mdl.z;
   accel_x = 0;
   accel_y = 0;
   accel_z = 0;
@@ -217,25 +219,49 @@ void loop(void) {
   // Serial.print("Mic: ");
   // Serial.println(mic);
   //delay(300);
-  //accel_y -= 4.85; //trimmed off extra processes
+  //accel_y -= 4.85;
   x_step = 0;
   y_step = 0;
-  if(accel_x>1){ //edit the code such that the if statements do the coord vals and then update all at once at the end
-    y_step = -MOVE_STEP; //eg movestepx = 1
+  if(accel_x>4.2){ //edit the code such that the if statements do the coord vals and then update all at once at the end
+    y_step = -LARGE_MOVE_STEP; //eg movestepx = 1
   }
-  if(accel_x<-1){
-    y_step = MOVE_STEP;
+  else if(accel_x>2.5){ //edit the code such that the if statements do the coord vals and then update all at once at the end
+    y_step = -MEDIUM_MOVE_STEP; //eg movestepx = 1
   }
-  if(accel_y>1){
-    x_step = MOVE_STEP; //eg movestep y = y
+  else if(accel_x>1){ //edit the code such that the if statements do the coord vals and then update all at once at the end
+    y_step = -SMALL_MOVE_STEP; //eg movestepx = 1
   }
-  if(accel_y<-1){
-    x_step = -MOVE_STEP;
+  if(accel_x<-4.2){
+    y_step = LARGE_MOVE_STEP;
+  }
+  else if(accel_x<-2.5){
+    y_step = MEDIUM_MOVE_STEP;
+  }
+  else if(accel_x<-1){
+    y_step = SMALL_MOVE_STEP;
+  }
+  if(accel_y>4.2){
+    x_step = LARGE_MOVE_STEP; //eg movestep y = y
+  }
+  else if(accel_y>2.5){
+    x_step = MEDIUM_MOVE_STEP; //eg movestep y = y
+  }
+  else if(accel_y>1){
+    x_step = SMALL_MOVE_STEP; //eg movestep y = y
+  }
+  if(accel_y<-4.2){
+    x_step = -LARGE_MOVE_STEP;
+  }
+  else if(accel_y<-2.5){
+    x_step = -MEDIUM_MOVE_STEP;
+  }
+  else if(accel_y<-1){
+    x_step = -SMALL_MOVE_STEP;
   }
   if(y_step>0){
-      x_step *= -1; //because sides are reversed when upside down
+      x_step *= -1;
   }
-  blehid.mouseMove(x_step, y_step); //update coordinates at the same time to avoid stair step-ing
+  blehid.mouseMove(x_step, y_step);
 
     //   // LRMBF for mouse button(s)
     //   case 'L':
