@@ -74,11 +74,20 @@ volatile int samplesRead; // number of samples read
 
 bool new_rev = true;
 
+int sensorpin0 = A0;  // sensor pin
+int sensorpin1 = A1;  // sensor pin
+int sensor0;  
+int sensor1;  
+int leftclick = 0;
+int rightclick = 0;
+
+
 void setup(void) {
   Serial.begin(115200);
   while ( !Serial ) delay(10);   // for nrf52840 with native usb
   Serial.println("Feather Sense Sensor Demo");
 
+  
   // initialize the sensors
   apds9960.begin();
   apds9960.enableProximity(true);
@@ -86,6 +95,9 @@ void setup(void) {
   bmp280.begin();
   lis3mdl.begin_I2C();
   lsm6ds33.begin_I2C();
+
+
+  
   // check for readings from LSM6DS33
   sensors_event_t accel;
   sensors_event_t gyro;
@@ -117,7 +129,7 @@ void setup(void) {
   Bluefruit.begin();
   // HID Device can have a min connection interval of 9*1.25 = 11.25 ms
   Bluefruit.Periph.setConnInterval(9, 16); // min = 9*1.25=11.25 ms, max = 16*1.25=20ms
-  Bluefruit.setTxPower(4);    // Check bluefruit.h for supported values
+  Bluefruit.setTxPower(8);    // Check bluefruit.h for supported values
 
   // Configure and Start Device Information Service
   bledis.setManufacturer("Adafruit Industries");
@@ -142,6 +154,19 @@ void loop(void) {
   // pressure = bmp280.readPressure();
   // altitude = bmp280.readAltitude(1013.25);
 
+  while(1){
+    if (Bluefruit.connected()) {
+      Serial.println("Device is connected");
+      break;
+    } else {
+      Serial.println("No device connected");
+    }
+    delay(1000);  // Delay for 1 second before checking again
+  }
+
+  sensor0 = analogRead(sensorpin0);
+  sensor1 = analogRead(sensorpin1);
+  
   lis3mdl.read();
   magnetic_x = lis3mdl.x;
   magnetic_y = lis3mdl.y;
@@ -237,18 +262,73 @@ void loop(void) {
   }
   blehid.mouseMove(x_step, y_step); //update coordinates at the same time to avoid stair step-ing
 
-    //   // LRMBF for mouse button(s)
-    //   case 'L':
+  //Serial.println("Sensor Value 0: " + String(sensor0));
+
+  //right mouse button
+  if (rightclick){
+    if (sensor0 < 80){
+      rightclick = 0;
+      blehid.mouseButtonRelease(MOUSE_BUTTON_RIGHT);
+    }
+  }
+  else{
+    if(sensor0>80){
+      //Serial.println("click!: " + String(sensor0));
+      rightclick = 1;
+      blehid.mouseButtonPress(MOUSE_BUTTON_RIGHT);
+      // Small delay to simulate a real click
+      delay(100);
+    }
+  }
+
+  //left mouse button
+  if (leftclick){
+    if (sensor1 < 80){
+      leftclick = 0;
+      blehid.mouseButtonRelease(MOUSE_BUTTON_LEFT);
+    }
+  }
+  else{
+    if(sensor1>80){
+      //Serial.println("click!: " + String(sensor0));
+      leftclick = 1;
+      blehid.mouseButtonPress(MOUSE_BUTTON_LEFT);
+      // Small delay to simulate a real click
+      delay(100);
+    }
+  }
+  
+      // LRMBF for mouse button(s)
+
+    // switch (click)
+    //   case 0:
+    //     if (sensor0 < 80){
+    //       blehid.mouseButtonRelease(MOUSE_BUTTON_LEFT);
+    //       click = 0;
+    //     }
+    //     break;
+
+    //   case 1:
+
     //     blehid.mouseButtonPress(MOUSE_BUTTON_LEFT);
-    //   break;
+    //     break;
+    //   case 2:
 
-    //   case 'R':
-    //     blehid.mouseButtonPress(MOUSE_BUTTON_RIGHT);
-    //   break;
+    //     if(sensor1>80){
+    //       //Serial.println("click!: " + String(sensor0));
+    //       leftclick = 1;
+    //       blehid.mouseButtonPress(MOUSE_BUTTON_LEFT);
+    //       // Small delay to simulate a real click
+    //       delay(100)
+    //     }
+    //     if(sensor2>80){
+    //       //Serial.println("click!: " + String(sensor0));
+    //       leftclick = 1;
+    //       blehid.mouseButtonPress(MOUSE_BUTTON_RIGHT);
+    //       // Small delay to simulate a real click
+    //       delay(100)
+    //     }
 
-    //   case 'M':
-    //     blehid.mouseButtonPress(MOUSE_BUTTON_MIDDLE);
-    //   break;
 
     //   case 'B':
     //     blehid.mouseButtonPress(MOUSE_BUTTON_BACKWARD);
@@ -327,4 +407,6 @@ void startAdv(void)
   Bluefruit.Advertising.setInterval(32, 244);    // in unit of 0.625 ms
   Bluefruit.Advertising.setFastTimeout(30);      // number of seconds in fast mode
   Bluefruit.Advertising.start(0);                // 0 = Don't stop advertising after n seconds  
+  Serial.println("Searching for bluetooth...");
+  
 }
