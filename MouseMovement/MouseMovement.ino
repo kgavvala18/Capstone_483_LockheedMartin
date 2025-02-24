@@ -44,26 +44,26 @@
 #include <PDM.h>
 #include <bluefruit.h>
 
-Adafruit_APDS9960 apds9960; // proximity, light, color, gesture
-Adafruit_BMP280 bmp280;     // temperautre, barometric pressure
 Adafruit_LIS3MDL lis3mdl;   // magnetometer
 Adafruit_LSM6DS3TRC lsm6ds3trc; // accelerometer, gyroscope
 Adafruit_LSM6DS33 lsm6ds33;
-Adafruit_SHT31 sht30;       // humidity
+
 
 BLEDis bledis;
 BLEHidAdafruit blehid;
 
-#define MOVE_STEP    1
+#define SMALL_MOVE_STEP     1
+#define MEDIUM_MOVE_STEP    4
+#define LARGE_MOVE_STEP     9
 
-uint8_t proximity;
-uint16_t r, g, b, c;
-float temperature, pressure, altitude;
+//uint8_t proximity;
+//uint16_t r, g, b, c;
+//float temperature, pressure, altitude;
 float magnetic_x, magnetic_y, magnetic_z;
 float accel_x, accel_y, accel_z;
 float gyro_x, gyro_y, gyro_z;
-float humidity;
-int32_t mic;
+//float humidity;
+//int32_t mic;
 int x_step, y_step;
 long int accel_array[6];
 long int check_array[6]={0.00, 0.00, 0.00, 0.00, 0.00, 0.00};
@@ -74,16 +74,19 @@ volatile int samplesRead; // number of samples read
 
 bool new_rev = true;
 
+int sensorpin0 = A0;  // sensor pin
+int sensorpin1 = A1;  // sensor pin
+int sensor0;  
+int sensor1;  
+int leftclick = 0;
+int rightclick = 0;
+
 void setup(void) {
   Serial.begin(115200);
   while ( !Serial ) delay(10);   // for nrf52840 with native usb
-  Serial.println("Feather Sense Sensor Demo");
+  //Serial.println("Feather Sense Sensor Demo");
 
   // initialize the sensors
-  apds9960.begin();
-  apds9960.enableProximity(true);
-  apds9960.enableColor(true);
-  bmp280.begin();
   lis3mdl.begin_I2C();
   lsm6ds33.begin_I2C();
   // check for readings from LSM6DS33
@@ -108,7 +111,7 @@ void setup(void) {
   if (new_rev) {
     lsm6ds3trc.begin_I2C();
   }
-  sht30.begin();
+  //sht30.begin();
   PDM.onReceive(onPDMdata);
   PDM.begin(1, 16000);
 
@@ -132,20 +135,10 @@ void setup(void) {
 }
 
 void loop(void) {
-  // proximity = apds9960.readProximity();
-  // while (!apds9960.colorDataReady()) {
-  //   delay(5);
-  // }
-  // apds9960.getColorData(&r, &g, &b, &c);
-
-  // temperature = bmp280.readTemperature();
-  // pressure = bmp280.readPressure();
-  // altitude = bmp280.readAltitude(1013.25);
+  sensor0 = analogRead(sensorpin0);
+  sensor1 = analogRead(sensorpin1);
 
   lis3mdl.read();
-  magnetic_x = lis3mdl.x;
-  magnetic_y = lis3mdl.y;
-  magnetic_z = lis3mdl.z;
   accel_x = 0;
   accel_y = 0;
   accel_z = 0;
@@ -165,108 +158,81 @@ void loop(void) {
   gyro_y = gyro.gyro.y;
   gyro_z = gyro.gyro.z;
 
-  // humidity = sht30.readHumidity();
+  if (rightclick){ //left as a polling event because analog pins on our board does not support external interupts
+    if (sensor0 < 80){
+      rightclick = 0;
+      blehid.mouseButtonRelease(MOUSE_BUTTON_RIGHT);
+    }
+  }
+  else{
+    if(sensor0>80){
+      //Serial.println("click!: " + String(sensor0));
+      rightclick = 1;
+      blehid.mouseButtonPress(MOUSE_BUTTON_RIGHT);
+      // Small delay to simulate a real click
+      delay(100); //may remove
+    }
+  }
 
-  // samplesRead = 0;
-  // mic = getPDMwave(4000);
-  
-  // Serial.println("\nFeather Sense Sensor Demo");
-  // Serial.println("---------------------------------------------");
-  // Serial.print("Proximity: ");
-  // Serial.println(apds9960.readProximity());
-  // Serial.print("Red: ");
-  // Serial.print(r);
-  // Serial.print(" Green: ");
-  // Serial.print(g);
-  // Serial.print(" Blue :");
-  // Serial.print(b);
-  // Serial.print(" Clear: ");
-  // Serial.println(c);
-  // Serial.print("Temperature: ");
-  // Serial.print(temperature);
-  // Serial.println(" C");
-  // Serial.print("Barometric pressure: ");
-  // Serial.println(pressure);
-  // Serial.print("Altitude: ");
-  // Serial.print(altitude);
-  // Serial.println(" m");
-  // Serial.print("Magnetic: ");
-  // Serial.print(magnetic_x);
-  // Serial.print(" ");
-  // Serial.print(magnetic_y);
-  // Serial.print(" ");
-  // Serial.print(magnetic_z);
-  // Serial.println(" uTesla");
-  // Serial.print("Acceleration: ");
-  // Serial.print(accel_x);
-  // Serial.print(" ");
-  // Serial.print(accel_y);
-  // Serial.print(" ");
-  // Serial.print(accel_z);
-  // Serial.println(" m/s^2");
-  // Serial.print("Gyro: ");
-  // Serial.print(gyro_x);
-  // Serial.print(" ");
-  // Serial.print(gyro_y);
-  // Serial.print(" ");
-  // Serial.print(gyro_z);
-  // Serial.println(" dps");
-  // Serial.print("Humidity: ");
-  // Serial.print(humidity);
-  // Serial.println(" %");
-  // Serial.print("Mic: ");
-  // Serial.println(mic);
-  //delay(300);
-  //accel_y -= 4.85; //trimmed off extra processes
+  //left mouse button
+  if (leftclick){
+    if (sensor1 < 80){
+      leftclick = 0;
+      blehid.mouseButtonRelease(MOUSE_BUTTON_LEFT);
+    }
+  }
+  else{
+    if(sensor1>80){
+      //Serial.println("click!: " + String(sensor0));
+      leftclick = 1;
+      blehid.mouseButtonPress(MOUSE_BUTTON_LEFT);
+      // Small delay to simulate a real click
+      delay(100);
+    }
+  }
+
   x_step = 0;
   y_step = 0;
-  if(accel_x>1){ //edit the code such that the if statements do the coord vals and then update all at once at the end
-    y_step = -MOVE_STEP; //eg movestepx = 1
+  if(accel_x>4.2){ 
+    y_step = -LARGE_MOVE_STEP; 
   }
-  if(accel_x<-1){
-    y_step = MOVE_STEP;
+  else if(accel_x>2.5){ 
+    y_step = -MEDIUM_MOVE_STEP; 
   }
-  if(accel_y>1){
-    x_step = MOVE_STEP; //eg movestep y = y
+  else if(accel_x>1){ 
+    y_step = -SMALL_MOVE_STEP; 
   }
-  if(accel_y<-1){
-    x_step = -MOVE_STEP;
+  if(accel_x<-4.2){
+    y_step = LARGE_MOVE_STEP;
+  }
+  else if(accel_x<-2.5){
+    y_step = MEDIUM_MOVE_STEP;
+  }
+  else if(accel_x<-1){
+    y_step = SMALL_MOVE_STEP;
+  }
+  if(accel_y>4.2){
+    x_step = LARGE_MOVE_STEP; 
+  }
+  else if(accel_y>2.5){
+    x_step = MEDIUM_MOVE_STEP; 
+  }
+  else if(accel_y>1){
+    x_step = SMALL_MOVE_STEP;
+  }
+  if(accel_y<-4.2){
+    x_step = -LARGE_MOVE_STEP;
+  }
+  else if(accel_y<-2.5){
+    x_step = -MEDIUM_MOVE_STEP;
+  }
+  else if(accel_y<-1){
+    x_step = -SMALL_MOVE_STEP;
   }
   if(y_step>0){
-      x_step *= -1; //because sides are reversed when upside down
+      x_step *= -1;
   }
-  blehid.mouseMove(x_step, y_step); //update coordinates at the same time to avoid stair step-ing
-
-    //   // LRMBF for mouse button(s)
-    //   case 'L':
-    //     blehid.mouseButtonPress(MOUSE_BUTTON_LEFT);
-    //   break;
-
-    //   case 'R':
-    //     blehid.mouseButtonPress(MOUSE_BUTTON_RIGHT);
-    //   break;
-
-    //   case 'M':
-    //     blehid.mouseButtonPress(MOUSE_BUTTON_MIDDLE);
-    //   break;
-
-    //   case 'B':
-    //     blehid.mouseButtonPress(MOUSE_BUTTON_BACKWARD);
-    //   break;
-
-    //   case 'F':
-    //     // This key is not always supported by every OS
-    //     blehid.mouseButtonPress(MOUSE_BUTTON_FORWARD);
-    //   break;
-
-    //   case 'X':
-    //     // X to release all buttons
-    //     blehid.mouseButtonRelease();
-    //   break;
-
-    //   default: break;
-    // }
-  
+  blehid.mouseMove(x_step, y_step);  
 }
 
 /*****************************************************************/
