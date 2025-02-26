@@ -55,11 +55,11 @@ BLEDis bledis;
 BLEHidAdafruit blehid;
 
 //adjustable configurations
-#define MOVE_STEP    1
+#define MOVE_STEP    10
 #define SCROLL_STEP    1
 #define DAMPING 0.95 //damping threshold to reduce drift
-#define SCOLL_THRESHOLD 5.0 //how far from base
-
+#define SCOLL_THRESHOLD 1.0 //how far from base
+#define POSITION_THRESHOLD .250 //how far from base
 //for integration
 float velocity_z = 0.0, velocity_y = 0.0 , velocity_x = 0.0 ;
 float position_z = 0.0, position_y = 0.0 , position_x = 0.0 ;
@@ -79,6 +79,7 @@ int32_t mic;
 int x_step, y_step;
 long int accel_array[6];
 long int check_array[6]={0.00, 0.00, 0.00, 0.00, 0.00, 0.00};
+float last_time;
 
 extern PDMClass PDM;
 short sampleBuffer[256];  // buffer to read samples into, each sample is 16-bits
@@ -90,7 +91,7 @@ void setup(void) {
   Serial.begin(115200);
   while ( !Serial ) delay(10);   // for nrf52840 with native usb
   Serial.println("Feather Sense Sensor Demo");
-
+  //Serial.print("test1");
   // initialize the sensors
   apds9960.begin();
   apds9960.enableProximity(true);
@@ -147,7 +148,9 @@ void setup(void) {
   blehid.begin();
 
   // Set up and start advertising
+  //Serial.print("test4");
   startAdv();
+  //`Serial.print("test2");
 }
 
 void loop(void) {
@@ -194,22 +197,40 @@ void loop(void) {
     //
     //integrate 
     //if need to save computation maybe check if these changed?
-    velocity_z += accel_z * dt;
+    velocity_z = accel_z * dt;
     position_z += velocity_z * dt;
-    velocity_y += accel_y * dt;
+    velocity_y = accel_y * dt;
     position_y += velocity_y * dt;
-    velocity_x += accel_x * dt;
+    velocity_x = accel_x * dt;
     position_x += velocity_x * dt;
     //damp velocity to avoid drift
-    velocity_z *= DAMPING;
-    velocity_y *= DAMPING;
-    velocity_x *= DAMPING;
+    //velocity_z *= DAMPING;
+    //velocity_y *= DAMPING;
+    //velocity_x *= DAMPING;
+    Serial.print("velocity_z: "); Serial.println(velocity_z);
+    Serial.print("position_z: "); Serial.println(position_z);
+    Serial.print("velocity_y: "); Serial.println(velocity_y);
+    Serial.print("position_y: "); Serial.println(position_y);
+    Serial.print("velocity_x: "); Serial.println(velocity_x);
+    Serial.print("position_x: "); Serial.println(position_x);
 
     //mouse movement logic
-    int x_step=(int)(position_x * MOVE_STEP)
-    int y_step=(int)(position_y * MOVE_STEP)
-
-    blehid.mouseMove(x_step, y_step);
+    if(position_x > POSITION_THRESHOLD || position_x < -POSITION_THRESHOLD){
+      int x_step=(int)(position_x * MOVE_STEP);
+      Serial.println(x_step);
+    }
+    else {
+      x_step = 0;
+    }
+    if(position_y > POSITION_THRESHOLD || position_y < -POSITION_THRESHOLD){
+      int y_step=(int)(position_y * MOVE_STEP);
+      Serial.println(y_step);
+    }
+    else{
+      int y_step = 0;
+    }
+    //blehid.mouseMove(x_step, y_step);
+    blehid.mouseMove(5, 5);
     //scroll if outside of deadzone
     if(position_z > SCOLL_THRESHOLD){
       blehid.mouseScroll(SCROLL_STEP);
@@ -217,16 +238,17 @@ void loop(void) {
     else if(position_z < -SCOLL_THRESHOLD){
       blehid.mouseScroll(-SCROLL_STEP);
     }
-
+    //Serial.print("test1");
     //TODO 
     //ADD/MERGE CLICKs
     //ADD GESTURE RECOGNITION
     //ADD MAGNETOMETER TO KNOW ELEVATION AND START 
+    
 
 
 
     //delay might help with smoother movement
-    delay(10);
+    delay(1000);
 
     // humidity = sht30.readHumidity();
   
@@ -306,7 +328,7 @@ void loop(void) {
     }
     else if(accel_z<-1){
       blehid.mouseScroll(-SCROLL_STEP);*/
-    }
+    //}
   
       //   // LRMBF for mouse button(s)
       //   case 'L':
@@ -373,7 +395,9 @@ void loop(void) {
   }
   
   void startAdv(void)
-  {  
+  { 
+    Serial.println("BLE Advertising Started...");
+
     // Advertising packet
     Bluefruit.Advertising.addFlags(BLE_GAP_ADV_FLAGS_LE_ONLY_GENERAL_DISC_MODE);
     Bluefruit.Advertising.addTxPower();
