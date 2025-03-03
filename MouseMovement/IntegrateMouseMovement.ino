@@ -44,6 +44,7 @@
 #include <PDM.h>
 #include <bluefruit.h>
 
+
 Adafruit_APDS9960 apds9960; // proximity, light, color, gesture
 Adafruit_BMP280 bmp280;     // temperautre, barometric pressure
 Adafruit_LIS3MDL lis3mdl;   // magnetometer
@@ -55,11 +56,11 @@ BLEDis bledis;
 BLEHidAdafruit blehid;
 
 //adjustable configurations
-#define MOVE_STEP    10
+#define MOVE_STEP    1000
 #define SCROLL_STEP    1
 #define DAMPING 0.95 //damping threshold to reduce drift
 #define SCOLL_THRESHOLD 1.0 //how far from base
-#define POSITION_THRESHOLD .250 //how far from base
+#define POSITION_THRESHOLD .001 //how far from base
 //for integration
 float velocity_z = 0.0, velocity_y = 0.0 , velocity_x = 0.0 ;
 float position_z = 0.0, position_y = 0.0 , position_x = 0.0 ;
@@ -163,7 +164,52 @@ void loop(void) {
     // temperature = bmp280.readTemperature();
     // pressure = bmp280.readPressure();
     // altitude = bmp280.readAltitude(1013.25);
-  
+    
+    //below is testing for keyboard inputs
+    while(false){
+      
+      //blehid.keyPress(HID_KEY_SHIFT_LEFT);  // Required for '+'
+      //blehid.keyPress(HID_KEY_EQUAL); 
+      //blehid.mouseScroll(SCROLL_STEP);
+      //blehid.keyPress(0x01);
+      //blehid.keyPress('c');
+      
+      
+      uint8_t keycode[6] = {0};
+      keycode[0] = 0x06;     // HID code for 'C'
+      //Serial.print("Modifier: ");
+      //Serial.println(0x01);    // Should print 1 for Ctrl
+      //Serial.print("Keycode: ");
+      //Serial.println(keycode[0], HEX);  // Should print 06 for 'C'
+      delay(10000);
+      blehid.keyboardReport(BLE_CONN_HANDLE_INVALID, 0x01, keycode);  // Send Ctrl + C as ctrl modifier
+      delay(10000);
+      uint8_t emptyKeycode[6] = {0};                                  
+      blehid.keyboardReport(BLE_CONN_HANDLE_INVALID, 0, emptyKeycode); 
+      blehid.keyRelease();
+
+      blehid.keyboardReport(BLE_CONN_HANDLE_INVALID, 0x01, emptyKeycode);  // Hold Ctrl (0x01 = Left Ctrl) is modifier for control
+
+      for (int i = 0; i < 5; i++) {          
+        blehid.mouseScroll(1);            
+        delay(100);                        
+      }
+
+      blehid.keyboardReport(BLE_CONN_HANDLE_INVALID, 0, emptyKeycode); // Release Ctrl modifier
+
+      blehid.keyRelease();
+      while(true){
+        Serial.print("done");
+        delay(10000);
+      }
+
+
+      //blehid.keyPress(0x2D);
+      //blehid.mouseMove(5, 5);
+      //delay(10000);
+      //blehid.keyRelease();
+      //delay(10000);
+    }
     lis3mdl.read();
     magnetic_x = lis3mdl.x;
     magnetic_y = lis3mdl.y;
@@ -198,15 +244,20 @@ void loop(void) {
     //integrate 
     //if need to save computation maybe check if these changed?
     velocity_z = accel_z * dt;
-    position_z += velocity_z * dt;
+    position_z = velocity_z * dt;
     velocity_y = accel_y * dt;
-    position_y += velocity_y * dt;
+    position_y = velocity_y * dt;
     velocity_x = accel_x * dt;
     position_x += velocity_x * dt;
     //damp velocity to avoid drift
     //velocity_z *= DAMPING;
     //velocity_y *= DAMPING;
     //velocity_x *= DAMPING;
+    //Serial.print("magnetic_x: "); Serial.println(magnetic_x);
+    //Serial.print("magnetic_y: "); Serial.println(magnetic_y);
+    //Serial.print("magnetic_z: "); Serial.println(magnetic_z);
+
+
     Serial.print("velocity_z: "); Serial.println(velocity_z);
     Serial.print("position_z: "); Serial.println(position_z);
     Serial.print("velocity_y: "); Serial.println(velocity_y);
@@ -215,27 +266,29 @@ void loop(void) {
     Serial.print("position_x: "); Serial.println(position_x);
 
     //mouse movement logic
-    if(position_x > POSITION_THRESHOLD || position_x < -POSITION_THRESHOLD){
-      int x_step=(int)(position_x * MOVE_STEP);
-      Serial.println(x_step);
+    int y_step = 0;
+    int z_step = 0;
+    if(position_z > POSITION_THRESHOLD || position_z < -POSITION_THRESHOLD){
+      z_step=(int)(position_z * MOVE_STEP);
+      Serial.println(z_step);
     }
     else {
-      x_step = 0;
+      z_step = 0;
     }
     if(position_y > POSITION_THRESHOLD || position_y < -POSITION_THRESHOLD){
-      int y_step=(int)(position_y * MOVE_STEP);
+      y_step=(int)(position_y * MOVE_STEP);
       Serial.println(y_step);
     }
     else{
-      int y_step = 0;
+      y_step = 0;
     }
     //blehid.mouseMove(x_step, y_step);
-    blehid.mouseMove(5, 5);
+    blehid.mouseMove(y_step, z_step);
     //scroll if outside of deadzone
-    if(position_z > SCOLL_THRESHOLD){
+    if(position_x > SCOLL_THRESHOLD){
       blehid.mouseScroll(SCROLL_STEP);
     }
-    else if(position_z < -SCOLL_THRESHOLD){
+    else if(position_x < -SCOLL_THRESHOLD){
       blehid.mouseScroll(-SCROLL_STEP);
     }
     //Serial.print("test1");
@@ -248,7 +301,7 @@ void loop(void) {
 
 
     //delay might help with smoother movement
-    delay(1000);
+    delay(100);
 
     // humidity = sht30.readHumidity();
   

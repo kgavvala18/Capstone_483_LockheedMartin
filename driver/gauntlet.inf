@@ -1,0 +1,39 @@
+[Version]
+Signature   = "$WINDOWS NT$"
+Provider    = %Msft%
+DriverVer   = 08/28/2000,1.0.0.1
+CatalogFile =
+
+[SourceDisksNames]
+1 = %Disk1%
+
+[SourceDisksFiles]
+examplefilesystem.sys = 1
+
+[DefaultInstall]
+OptionDesc = %ServiceDesc%
+CopyFiles = ExampleFileSystem.DriverFiles
+
+[ExampleFileSystem.DriverFiles]
+examplefilesystem.sys
+
+
+[DefaultInstall.Services]
+AddService = %ServiceName%,,ExampleFileSystem.Service
+
+[ExampleFileSystem.Service]
+DisplayName    = %ServiceName%
+Description    = %ServiceDesc%
+ServiceBinary  = %12%\examplefilesystem.sys
+ServiceType    = 2 ;    SERVICE_FILE_SYSTEM_DRIVER
+StartType      = 1 ;    SERVICE_SYSTEM_START
+ErrorControl   = 1 ;    SERVICE_ERROR_NORMAL
+LoadOrderGroup = "File System"
+AddReg         = ExampleFileSystem.AddRegistry
+
+[Strings]
+Msft        = "Microsoft Corporation"
+ServiceDesc = "Example File System Driver"
+ServiceName = "ExampleFileSystem"
+ParameterPath = "SYSTEM\CurrentControlSet\Services\ExampleFileSystem\Parameters"
+Disk1       = "Example File System Driver CD"
