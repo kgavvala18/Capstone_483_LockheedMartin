@@ -76,7 +76,6 @@ float magnetic_x, magnetic_y, magnetic_z;
 float accel_x, accel_y, accel_z;
 float gyro_x, gyro_y, gyro_z;
 float humidity;
-int32_t mic;
 long int accel_array[6];
 long int check_array[6]={0, 0, 0, 0, 0, 0};
 
@@ -90,6 +89,14 @@ volatile int samplesRead;
 // Variables for sensor fusion (orientation in radians)
 float pitch = 0.0, roll = 0.0, yaw = 0.0;
 
+// ----- Rolling Average Filter Setup -----
+// We'll maintain a rolling buffer of the last three linear acceleration values for each axis.
+#define ROLLING_SIZE 3
+float rolling_lin_ax[ROLLING_SIZE] = {0, 0, 0};
+float rolling_lin_ay[ROLLING_SIZE] = {0, 0, 0};
+float rolling_lin_az[ROLLING_SIZE] = {0, 0, 0};
+int rolling_index = 0;
+
 void setup(void) {
   Serial.begin(115200);
   while (!Serial) delay(10);
@@ -102,6 +109,7 @@ void setup(void) {
   bmp280.begin();
   lis3mdl.begin_I2C();
   lsm6ds33.begin_I2C();
+  
   sensors_event_t accel, gyro, temp;
   lsm6ds33.getEvent(&accel, &gyro, &temp);
   accel_array[0] = accel.acceleration.x;
@@ -168,8 +176,7 @@ void loop(void) {
   float accel_pitch = atan2(accel.acceleration.y, sqrt(accel.acceleration.x * accel.acceleration.x + accel.acceleration.z * accel.acceleration.z));
   float accel_roll  = atan2(-accel.acceleration.x, accel.acceleration.z);
 
-  // Update orientation with complementary filter using gyro (gyroscope values in rad/s assumed)
-  // Note: if your gyro outputs degrees/s, convert them to radians/s first.
+  // Update orientation with complementary filter using gyro (assumed in rad/s)
   pitch = comp_alpha * (pitch + gyro.gyro.y * dt) + (1.0 - comp_alpha) * accel_pitch;
   roll  = comp_alpha * (roll  + gyro.gyro.x * dt) + (1.0 - comp_alpha) * accel_roll;
   yaw   = atan2(magnetic_y, magnetic_x);  // Yaw from magnetometer (in radians)
@@ -194,25 +201,35 @@ void loop(void) {
   float R33 = cosP * cosR;
 
   // --- Transform Accelerometer Reading into World Frame ---
-  // Raw accelerometer (body frame)
   float ax = accel.acceleration.x;
   float ay = accel.acceleration.y;
   float az = accel.acceleration.z;
-  // Rotate into world frame
   float world_ax = R11 * ax + R12 * ay + R13 * az;
   float world_ay = R21 * ax + R22 * ay + R23 * az;
   float world_az = R31 * ax + R32 * ay + R33 * az;
 
   // --- Remove Gravity from World Frame Acceleration ---
-  // Assuming gravity = 9.81 m/s^2 downward (z-axis)
+  // Gravity assumed 9.81 m/s^2 down along z-axis.
   float lin_ax = world_ax;
   float lin_ay = world_ay;
   float lin_az = world_az - 9.81;
 
-  // --- Kalman Filter on Linear Acceleration ---
-  float filt_lin_ax = kf_x.update(lin_ax);
-  float filt_lin_ay = kf_y.update(lin_ay);
-  float filt_lin_az = kf_z.update(lin_az);
+  // --- Rolling Average Filter (window size 3) ---
+  // Store current linear acceleration values in the rolling buffers.
+  rolling_lin_ax[rolling_index] = lin_ax;
+  rolling_lin_ay[rolling_index] = lin_ay;
+  rolling_lin_az[rolling_index] = lin_az;
+  rolling_index = (rolling_index + 1) % ROLLING_SIZE;
+  
+  // Compute average over the last three samples.
+  float avg_lin_ax = (rolling_lin_ax[0] + rolling_lin_ax[1] + rolling_lin_ax[2]) / ROLLING_SIZE;
+  float avg_lin_ay = (rolling_lin_ay[0] + rolling_lin_ay[1] + rolling_lin_ay[2]) / ROLLING_SIZE;
+  float avg_lin_az = (rolling_lin_az[0] + rolling_lin_az[1] + rolling_lin_az[2]) / ROLLING_SIZE;
+
+  // --- Kalman Filter on Averaged Linear Acceleration ---
+  float filt_lin_ax = kf_x.update(avg_lin_ax);
+  float filt_lin_ay = kf_y.update(avg_lin_ay);
+  float filt_lin_az = kf_z.update(avg_lin_az);
 
   // --- Integration: Update Velocity and Position ---
   velocity_x += filt_lin_ax * dt;
@@ -229,11 +246,11 @@ void loop(void) {
   position_z += velocity_z * dt;
 
   // --- Correct Vertical Drift with BMP Altitude ---
-  // Blend integrated vertical position with BMP altitude reading
+  // Blend integrated vertical position with BMP altitude reading.
   position_z = comp_alpha * position_z + (1.0 - comp_alpha) * bmp_alt;
 
   // --- Debug Output ---
-  Serial.print("Pitch: "); Serial.println(pitch * 57.2958); // in degrees
+  Serial.print("Pitch: "); Serial.println(pitch * 57.2958); // degrees
   Serial.print("Roll:  "); Serial.println(roll * 57.2958);
   Serial.print("Yaw:   "); Serial.println(yaw * 57.2958);
   Serial.print("Filtered Linear Accel (X,Y,Z): ");
@@ -260,7 +277,7 @@ void loop(void) {
   }
   blehid.mouseMove(move_y, move_z);
 
-  // Scroll control based on X-axis translation (if moved outside deadzone)
+  // Scroll control based on X-axis translation (if outside deadzone)
   if (fabs(position_x) > SCOLL_THRESHOLD) {
     if (position_x > 0)
       blehid.mouseScroll(SCROLL_STEP);
