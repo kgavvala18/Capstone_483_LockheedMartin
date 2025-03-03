@@ -58,7 +58,7 @@ BLEHidAdafruit blehid;
 //adjustable configurations
 #define MOVE_STEP    1000
 #define SCROLL_STEP    1
-#define DAMPING 0.95 //damping threshold to reduce drift
+#define DAMPING 0.9 //damping threshold to reduce drift
 #define SCOLL_THRESHOLD 1.0 //how far from base
 #define POSITION_THRESHOLD .001 //how far from base
 //for integration
@@ -250,9 +250,11 @@ void loop(void) {
     velocity_x = accel_x * dt;
     position_x += velocity_x * dt;
     //damp velocity to avoid drift
-    //velocity_z *= DAMPING;
-    //velocity_y *= DAMPING;
-    //velocity_x *= DAMPING;
+    velocity_z *= DAMPING;
+    velocity_y *= DAMPING;
+    velocity_x *= DAMPING;
+    //TODO Add max velocity and maybe use velocity? and add average to get rid of noise?
+
     //Serial.print("magnetic_x: "); Serial.println(magnetic_x);
     //Serial.print("magnetic_y: "); Serial.println(magnetic_y);
     //Serial.print("magnetic_z: "); Serial.println(magnetic_z);
