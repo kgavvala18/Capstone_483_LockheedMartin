@@ -61,6 +61,7 @@ BLEHidAdafruit blehid;
 #define DAMPING 0.9 //damping threshold to reduce drift
 #define SCOLL_THRESHOLD 1.0 //how far from base
 #define POSITION_THRESHOLD .001 //how far from base
+#define ACCEL_THRES .5
 //for integration
 float velocity_z = 0.0, velocity_y = 0.0 , velocity_x = 0.0 ;
 float position_z = 0.0, position_y = 0.0 , position_x = 0.0 ;
@@ -227,9 +228,28 @@ void loop(void) {
       lsm6ds33.getEvent(&accel, &gyro, &temp);
     }
     //attempt to account for gravity for now
-    accel_x = accel.acceleration.x - gravity_x;
-    accel_y = accel.acceleration.y - gravity_y;
-    accel_z = accel.acceleration.z - gravity_z;
+    if(abs(accel.acceleration.x - gravity_x)  >= ACCEL_THRES )
+    {
+      accel_x = accel.acceleration.x - gravity_x;
+    }
+    else{
+      accel_x = 0;
+    }
+    if(abs(accel.acceleration.y - gravity_y)  >= ACCEL_THRES )
+    {
+      accel_y = accel.acceleration.y - gravity_y;
+    }
+    else{
+      accel_y = 0;
+    }
+    if(abs(accel.acceleration.z - gravity_z)  >= ACCEL_THRES )
+    {
+      accel_z = accel.acceleration.z - gravity_z;
+    }
+    else{
+      accel_z = 0;
+    }
+     
     gyro_x = gyro.gyro.x;
     gyro_y = gyro.gyro.y;
     gyro_z = gyro.gyro.z;
