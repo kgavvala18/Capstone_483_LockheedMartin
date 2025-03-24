@@ -1,0 +1,62 @@
+;
+; GauntletKMDF.inf
+;
+
+[Version]
+Signature   = "$WINDOWS NT$"
+Class       = System ; TODO: specify appropriate Class
+ClassGuid   = {4d36e97d-e325-11ce-bfc1-08002be10318} ; TODO: specify appropriate ClassGuid
+Provider    = %ManufacturerName%
+CatalogFile = GauntletKMDF.cat
+DriverVer   = ; TODO: set DriverVer in stampinf property pages
+PnpLockdown = 1
+
+[DestinationDirs]
+DefaultDestDir = 13
+
+[SourceDisksNames]
+1 = %DiskName%,,,""
+
+[SourceDisksFiles]
+GauntletKMDF.sys = 1,,
+
+;*****************************************
+; Install Section
+;*****************************************
+
+[Manufacturer]
+%ManufacturerName% = Standard,NT$ARCH$.10.0...16299 ; %13% support introduced in build 16299
+
+[Standard.NT$ARCH$.10.0...16299]
+%GauntletKMDF.DeviceDesc% = GauntletKMDF_Device, Root\GauntletKMDF ; TODO: edit hw-id
+
+[GauntletKMDF_Device.NT]
+CopyFiles = File_Copy
+
+[File_Copy]
+GauntletKMDF.sys
+
+;-------------- Service installation
+[GauntletKMDF_Device.NT.Services]
+AddService = GauntletKMDF,%SPSVCINST_ASSOCSERVICE%, GauntletKMDF_Service_Inst
+
+; -------------- GauntletKMDF driver install sections
+[GauntletKMDF_Service_Inst]
+DisplayName    = %GauntletKMDF.SVCDESC%
+ServiceType    = 1               ; SERVICE_KERNEL_DRIVER
+StartType      = 3               ; SERVICE_DEMAND_START
+ErrorControl   = 1               ; SERVICE_ERROR_NORMAL
+ServiceBinary  = %13%\GauntletKMDF.sys
+
+[GauntletKMDF_Device.NT.Wdf]
+KmdfService = GauntletKMDF, GauntletKMDF_wdfsect
+
+[GauntletKMDF_wdfsect]
+KmdfLibraryVersion = $KMDFVERSION$
+
+[Strings]
+SPSVCINST_ASSOCSERVICE = 0x00000002
+ManufacturerName = "<Your manufacturer name>" ;TODO: Replace with your manufacturer name
+DiskName = "GauntletKMDF Installation Disk"
+GauntletKMDF.DeviceDesc = "GauntletKMDF Device"
+GauntletKMDF.SVCDESC = "GauntletKMDF Service"
