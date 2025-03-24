@@ -1,13 +1,15 @@
 // preload.js
 
-// All the Node.js APIs are available in the preload process.
-// It has the same sandbox as a Chrome extension.
-const { contextBridge, ipcRenderer } = require('electron')
+const { contextBridge } = require('electron')
+const Mousetrap = require('mousetrap')
 
+// Expose Mousetrap to the renderer process safely.
+contextBridge.exposeInMainWorld('Mousetrap', Mousetrap)
+
+// Also expose other APIs as needed.
 contextBridge.exposeInMainWorld('versions', {
   node: () => process.versions.node,
   chrome: () => process.versions.chrome,
   electron: () => process.versions.electron,
   ping: () => ipcRenderer.invoke('ping')
-  // we can also expose variables, not just functions
 })
