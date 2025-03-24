@@ -1,22 +1,56 @@
-<!--index.html-->
 <!DOCTYPE html>
-<html>
-  <head>
-    <meta charset="UTF-8" />
-    <meta
-      http-equiv="Content-Security-Policy"
-      content="default-src 'self'; script-src 'self'"
-    />
-    <meta
-      http-equiv="X-Content-Security-Policy"
-      content="default-src 'self'; script-src 'self'"
-    />
-    <title>Hello from Electron renderer!</title>
-  </head>
-  <body>
-    <h1>Hello from Electron renderer!</h1>
-    <p>👋</p>
-    <p id="info"></p>
-  </body>
-  <script src="./renderer.js"></script>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Glove Settings Menu</title>
+  <style>
+    body { font-family: sans-serif; margin: 20px; }
+    .settings, .hand-display, .simulate { margin-bottom: 30px; }
+    .sensor-input { margin: 10px 0; }
+    .sensor-label { display: inline-block; width: 100px; }
+    #handImage { width: 300px; }
+    .sensor-btn { margin-right: 10px; }
+  </style>
+</head>
+<body>
+  <h1>Glove Keybind Settings</h1>
+  
+  <div class="settings">
+    <h2>Keybind Remapping</h2>
+    <!-- The following inputs let you assign a key or key sequence for each sensor -->
+    <div class="sensor-input">
+      <!-- flex_thumb sensor -->
+      <label class="sensor-label" for="flex_thumb">Flex Thumb:</label>
+      <input type="text" id="flex_thumb" placeholder="e.g., Ctrl+T">
+    </div>
+    <div class="sensor-input">
+      <!-- flex_index sensor -->
+      <label class="sensor-label" for="flex_index">Flex Index:</label>
+      <input type="text" id="flex_index" placeholder="e.g., Alt+I">
+    </div>
+    <div class="sensor-input">
+      <!-- flex_middle sensor -->
+      <label class="sensor-label" for="flex_middle">Flex Middle:</label>
+      <input type="text" id="flex_middle" placeholder="e.g., Shift+M">
+    </div>
+    <!-- Add additional sensors as needed -->
+    <button id="saveBindings">Save Keybinds</button>
+  </div>
+  
+  <div class="hand-display">
+    <h2>Hand Display</h2>
+    <!-- Default hand image; when a sensor is triggered, the src will update -->
+    <img id="handImage" src="images/hand_default.png" alt="Hand Display">
+  </div>
+  
+  <div class="simulate">
+    <h2>Simulate Sensor Trigger</h2>
+    <!-- These buttons simulate sensor input events -->
+    <button class="sensor-btn" data-sensor="flex_thumb">Simulate Flex Thumb</button>
+    <button class="sensor-btn" data-sensor="flex_index">Simulate Flex Index</button>
+    <button class="sensor-btn" data-sensor="flex_middle">Simulate Flex Middle</button>
+  </div>
+  
+  <script src="renderer.js"></script>
+</body>
 </html>
