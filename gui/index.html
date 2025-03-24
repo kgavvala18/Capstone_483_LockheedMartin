@@ -7,9 +7,9 @@
     body { font-family: sans-serif; margin: 20px; }
     .settings, .hand-display, .simulate { margin-bottom: 30px; }
     .sensor-input { margin: 10px 0; }
-    .sensor-label { display: inline-block; width: 100px; }
+    .sensor-label { display: inline-block; width: 120px; }
     #handImage { width: 300px; }
-    .sensor-btn { margin-right: 10px; }
+    .sensor-btn { margin-right: 10px; margin-bottom: 5px; }
   </style>
 </head>
 <body>
@@ -17,7 +17,7 @@
   
   <div class="settings">
     <h2>Keybind Remapping</h2>
-    <!-- The following inputs let you assign a key or key sequence for each sensor -->
+    <!-- Inputs for five sensors -->
     <div class="sensor-input">
       <!-- flex_thumb sensor -->
       <label class="sensor-label" for="flex_thumb">Flex Thumb:</label>
@@ -33,7 +33,16 @@
       <label class="sensor-label" for="flex_middle">Flex Middle:</label>
       <input type="text" id="flex_middle" placeholder="e.g., Shift+M">
     </div>
-    <!-- Add additional sensors as needed -->
+    <div class="sensor-input">
+      <!-- flex_ring sensor -->
+      <label class="sensor-label" for="flex_ring">Flex Ring:</label>
+      <input type="text" id="flex_ring" placeholder="e.g., Ctrl+R">
+    </div>
+    <div class="sensor-input">
+      <!-- flex_pinky sensor -->
+      <label class="sensor-label" for="flex_pinky">Flex Pinky:</label>
+      <input type="text" id="flex_pinky" placeholder="e.g., Alt+P">
+    </div>
     <button id="saveBindings">Save Keybinds</button>
   </div>
   
@@ -45,10 +54,12 @@
   
   <div class="simulate">
     <h2>Simulate Sensor Trigger</h2>
-    <!-- These buttons simulate sensor input events -->
+    <!-- Buttons to simulate sensor input events -->
     <button class="sensor-btn" data-sensor="flex_thumb">Simulate Flex Thumb</button>
     <button class="sensor-btn" data-sensor="flex_index">Simulate Flex Index</button>
     <button class="sensor-btn" data-sensor="flex_middle">Simulate Flex Middle</button>
+    <button class="sensor-btn" data-sensor="flex_ring">Simulate Flex Ring</button>
+    <button class="sensor-btn" data-sensor="flex_pinky">Simulate Flex Pinky</button>
   </div>
   
   <script src="renderer.js"></script>
