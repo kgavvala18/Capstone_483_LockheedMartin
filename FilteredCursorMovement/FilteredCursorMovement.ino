@@ -100,9 +100,9 @@ void setup()
   sox.setAccelDataRate(LSM6DS_RATE_208_HZ);
   sox.setGyroDataRate(LSM6DS_RATE_208_HZ);
 
+  configBluetooth();
+
   Bluefruit.begin();
-  // HID Device can have a min connection interval of 9*1.25 = 11.25 ms
-  Bluefruit.Periph.setConnInterval(9, 16); // min = 9*1.25=11.25 ms, max = 16*1.25=20ms
   Bluefruit.setTxPower(4);                 // Check bluefruit.h for supported values
 
   // Configure and Start Device Information Service
@@ -228,4 +228,10 @@ void startAdv(void)
   Bluefruit.Advertising.setInterval(32, 244); // in unit of 0.625 ms
   Bluefruit.Advertising.setFastTimeout(30);   // number of seconds in fast mode
   Bluefruit.Advertising.start(0);             // 0 = Don't stop advertising after n seconds
+}
+
+void configBluetooth() {
+  // add any bluetooth config stuff here
+  Bluefruit.configPrphBandwidth(BANDWIDTH_MAX);
+  Bluefruit.configPrphConn(23, 8, 4, 4)
 }
