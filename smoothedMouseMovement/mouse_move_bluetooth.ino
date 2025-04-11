@@ -19,6 +19,7 @@ converting this to use on the feather nRF52840 sense board with BLe HID
 // #include <Mouse.h>
 #include <math.h>
 // #include <Adafruit_TinyUSB.h>s
+// #include <gesture.h>
 
 BLEDis bledis;
 BLEHidAdafruit blehid;
@@ -122,6 +123,85 @@ int rightclick = 0;
 int laser = 0;
 // float F[EKF_N*EKF_N];
 
+const int button0[] = {1, 0, 0, 0, 0, 0, 1, 0, 1};
+const int button1[] = {1, 0, 0, 0, 0, 1, 1, 0, 1};
+const int button2[] = {1, 0, 0, 0, 0, 0, 1, 1, 1};
+const int button3[] = {1, 1, 0, 0, 1, 0, 0, 0, 0};
+const int button4[] = {1, 1, 0, 1, 1, 0, 0, 0, 0};
+const int button5[] = {1, 0, 0, 0, 0, 1, 1, 1, 0};
+const int button6[] = {1, 0, 0, 0, 0, 1, 1, 1, 1};
+const int button7[] = {1, 0, 0, 0, 1, 0, 0, 0, 0};
+const int button8[] = {1, 0, 0, 1, 1, 0, 0, 0, 0};
+const int button9[] = {1, 0, 1, 0, 1, 0, 0, 0, 0};
+const int buttonProg[] = {1, 1, 1, 1, 1, 0, 0, 0, 0};
+const int buttonEnter[] = {1, 0, 1, 1, 1, 0, 0, 0, 0};
+const int leftArrow[] = {1, 0, 0, 0, 0, 1, 1, 0, 0};
+const int upArrow[] = {1, 0, 0, 0, 0, 0, 1, 1, 0};
+const int rightArrow[] = {1, 0, 0, 0, 0, 0, 1, 0, 0};
+const int downArrow[] = {1, 0, 0, 0, 0, 1, 0, 1, 1};
+const int buttonCenter[] = {1, 0, 0, 0, 0, 0, 0, 1, 1};
+const int buttonSelect[] = {1, 1, 1, 1, 0, 0, 0, 0, 0};
+const int buttonStart[] = {1, 1, 1, 0, 0, 0, 0, 0, 0};
+const int buttonB[] = {1, 1, 1, 0, 1, 0, 0, 0, 0};
+const int buttonA[] = {0, 0, 0, 0, 0, 0, 0, 0, 0};
+const int numButtons = 21;
+
+const int *buttonSignatures[] = {
+    button0, button1, button2, button3, button4, button5, button6,
+    button7, button8, button9, buttonProg, buttonEnter, leftArrow,
+    upArrow, rightArrow, downArrow, buttonCenter, buttonSelect,
+    buttonStart, buttonB, buttonA};
+
+const char *buttonNames[] = {
+    "Button 0", "Button 1", "Button 2", "Button 3", "Button 4",
+    "Button 5", "Button 6", "Button 7", "Button 8", "Button 9",
+    "Button Prog", "Button Enter", "Left Arrow", "Up Arrow",
+    "Right Arrow", "Down Arrow", "Button Center", "Button Select",
+    "Button Start", "Button B", "Button A"};
+
+const int inputPins[] = {2, 5, 6, 9, 10, 11, 12, 13, 23};
+const int numPins = 9;
+int pinReadings[numPins];
+
+bool pressed = false;
+
+int button_check = 0;
+
+int matchButton(const int *pinReadings)
+{
+  for (int i = 0; i < numButtons; i++)
+  {
+    bool match = true;
+    for (int j = 0; j < numPins; j++)
+    {
+      if (pinReadings[j] != buttonSignatures[i][j])
+      {
+        match = false;
+        break;
+      }
+    }
+    if (match)
+      return i;
+  }
+  return -1;
+}
+
+void pressWinNumber(uint8_t number)
+{
+  if (number >= 1 && number <= 9) // windows plus num 1-9
+  {
+    blehid.keyPress(0x08, number);
+    delay(10);
+    blehid.keyRelease();
+  }
+  else if (number == 0) // press only windows key
+  {
+    blehid.keyPress(0x08, 0);
+    delay(10);
+    blehid.keyRelease();
+  }
+}
+
 // the setup routine runs once when you press reset:
 void setup()
 {
@@ -172,6 +252,12 @@ void setup()
   // Set up and start advertising
   startAdv();
   pinMode(A5, OUTPUT);
+
+  // Initialize button input pins
+  for (int i = 0; i < numPins; i++)
+  {
+    pinMode(inputPins[i], INPUT);
+  }
 }
 
 // the loop routine runs over and over again forever:
@@ -238,51 +324,87 @@ void loop()
   // scale the acceleration values by 20
   /*the scaling factor was empiricaly determined. We need to find why this works
   to see if there may be a more opmtimal value*/
-  float my = 20 * _ekf.x[1];
-  float mz = -20 * _ekf.x[3];
+  float my = 10 * _ekf.x[1];
+  float mz = -10 * _ekf.x[3];
 
   float sense1 = _ekf.x[4];
   float sense0 = _ekf.x[5];
 
   blehid.mouseMove(mz, my);
 
-  Serial.println(gesture(thumb, index, middle, ring, pinky));
+  // Serial.println(gesture(thumb, index, middle, ring, pinky));
 
-  // if(sense1 > 40){
-  //   //Serial.println("click!: " + String(sensor0));
-  //   blehid.mouseButtonPress(MOUSE_BUTTON_RIGHT);
-  //   // Small delay to simulate a real click
-  //   delay(100); //may remove
-  //   blehid.mouseButtonRelease(MOUSE_BUTTON_RIGHT);
-  // }
+  // Read buttons
+  for (int i = 0; i < numPins; i++)
+  {
+    pinReadings[i] = digitalRead(inputPins[i]);
+  }
 
-  // //left mouse button
-  // if (leftclick){
-  //   if (sense0 < 50){
-  //     leftclick = 0;
-  //     blehid.mouseButtonRelease(MOUSE_BUTTON_LEFT);
-  //   }
-  // }
-  // else{
-  //   if(sense0 > 50){
-  //     //Serial.println("click!: " + String(sensor0));
-  //     leftclick = 1;
-  //     blehid.mouseButtonPress(MOUSE_BUTTON_LEFT);
-  //   }
-  // }
+  if (button_check == 100)
+  {
+    int index = matchButton(pinReadings);
+    if (index >= 0 && index <= 9 && !pressed)
+    {
+      Serial.print("Detected: ");
+      Serial.println(buttonNames[index]);
+      pressWinNumber(index);
+      pressed = true;
+      delay(100);
+    }
+    else if (index == -1)
+    {
+      pressed = 0;
+      delay(100);
+    }
+    button_check = 0;
+  }
 
-  // if (laser == 0){
-  //   if (sensor2 > 75){
-  //     laser = 1;
-  //     digitalWrite(A5, HIGH);  // Turn the pin on (set it HIGH)
-  //   }
-  // }
-  // else {
-  //   if (sensor2 < 75){
-  //     laser = 0;
-  //     digitalWrite(A5, LOW);   // Turn the pin off (set it LOW)
-  //   }
-  // }
+  button_check++;
+
+  if (sense1 > 40)
+  {
+    // Serial.println("click!: " + String(sensor0));
+    blehid.mouseButtonPress(MOUSE_BUTTON_RIGHT);
+    // Small delay to simulate a real click
+    delay(100); // may remove
+    blehid.mouseButtonRelease(MOUSE_BUTTON_RIGHT);
+  }
+
+  // left mouse button
+  if (leftclick)
+  {
+    if (sense0 < 50)
+    {
+      leftclick = 0;
+      blehid.mouseButtonRelease(MOUSE_BUTTON_LEFT);
+    }
+  }
+  else
+  {
+    if (sense0 > 50)
+    {
+      // Serial.println("click!: " + String(sensor0));
+      leftclick = 1;
+      blehid.mouseButtonPress(MOUSE_BUTTON_LEFT);
+    }
+  }
+
+  if (laser == 0)
+  {
+    if (sensor2 > 75)
+    {
+      laser = 1;
+      digitalWrite(A5, HIGH); // Turn the pin on (set it HIGH)
+    }
+  }
+  else
+  {
+    if (sensor2 < 75)
+    {
+      laser = 0;
+      digitalWrite(A5, LOW); // Turn the pin off (set it LOW)
+    }
+  }
 
   // // Serial.print(_ekf.x[1]); Serial.print(",");
   // // Serial.print(_ekf.x[3]); Serial.print(",");
