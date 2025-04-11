@@ -169,6 +169,13 @@ void setup()
   // BLE HID
   blehid.begin();
 
+  //Mouse move bool
+  Bool mouseMove = True;
+
+  //needed for gesture key presses
+  uint8_t emptyKeycode[6] = {0};
+  uint8_t activeKey[6] = {0};
+
   // Set up and start advertising
   startAdv();
   pinMode(A5, OUTPUT);
@@ -245,93 +252,74 @@ void loop()
   float sense0 = _ekf.x[5];
 
   blehid.mouseMove(mz, my);
-
+  GESTURES gangesign = gesture(thumb, index, middle, ring, pinky)
   Serial.println(gesture(thumb, index, middle, ring, pinky));
 
-  // if(sense1 > 40){
-  //   //Serial.println("click!: " + String(sensor0));
-  //   blehid.mouseButtonPress(MOUSE_BUTTON_RIGHT);
-  //   // Small delay to simulate a real click
-  //   delay(100); //may remove
-  //   blehid.mouseButtonRelease(MOUSE_BUTTON_RIGHT);
-  // }
+  Switch(gangsign){
+    case TIMRP: //disables mouse movement
+      mousemove = !(mouseMove); //dont know where the mouse movement is in the code to disable
+      break;
+    case IMRP:
+      //laser trigger here
+    case TMRP: //snip
+      activeKey[0] = 0x16;
+      blehid.keyboardReport(BLE_CONN_HANDLE_INVALID, 0x28, activeKey);
+      blehid.keyboardReport(BLE_CONN_HANDLE_INVALID, 0, emptyKeycode);
+      blehid.keyRelease();
+      break;
+    case TIRP: //secret function alt f4
+      activeKey[0] = 0x3D;
+      blehid.keyboardReport(BLE_CONN_HANDLE_INVALID, 0x04, activeKey);
+      blehid.keyboardReport(BLE_CONN_HANDLE_INVALID, 0, emptyKeycode);
+      blehid.keyRelease();
+      break;
+    case MRP: //alt tab
+      activeKey[0] = 0x2B;
+      blehid.keyboardReport(BLE_CONN_HANDLE_INVALID, 0x04, activeKey);
+      blehid.keyboardReport(BLE_CONN_HANDLE_INVALID, 0, emptyKeycode);
+      blehid.keyRelease();
+      break;
+    case IRP: //alt shift tab
+      activeKey[0] = 0x2B;
+      blehid.keyboardReport(BLE_CONN_HANDLE_INVALID, 0x24, activeKey);
+      blehid.keyboardReport(BLE_CONN_HANDLE_INVALID, 0, emptyKeycode);
+      blehid.keyRelease();
+      break;
+    case TRP: //scroll
+      while(gesture(thumb, index, middle, ring, pinky) == TRP){ //i want to scroll as long as the gesture is held
+        if (ay > 1){ //it looks sketch, needs to test. idk if this is the right accel direction
+          blehid.mouseScroll(1);
+          blehid.mouseScroll(0);
+        }
+        else if (ay < -1){
+          blehid.mouseScroll(-1);
+          blehid.mouseScroll(0);
+        }
+      }
+      break;
+    case TP: //zoom
+      while(gesture(thumb, index, middle, ring, pinky) == TP){ //i want to zoom as long as the gesture is held
+        if (ay > 1){ //it looks sketch, needs to test. idk if this is the right accel direction
+          blehid.keyboardReport(BLE_CONN_HANDLE_INVALID, 0x01, emptyKeycode);  // Hold Ctrl (0x01 = Left Ctrl) is modifier for control
+          blehid.mouseScroll(-1);
+          blehid.mouseScroll(0);
+          blehid.keyboardReport(BLE_CONN_HANDLE_INVALID, 0, emptyKeycode); // Release Ctrl modifier
+          blehid.keyRelease();
+        }
+        else if (ay < -1){
+          blehid.keyboardReport(BLE_CONN_HANDLE_INVALID, 0x01, emptyKeycode);  // Hold Ctrl (0x01 = Left Ctrl) is modifier for control
+          blehid.mouseScroll(1);
+          blehid.mouseScroll(0);
+          blehid.keyboardReport(BLE_CONN_HANDLE_INVALID, 0, emptyKeycode); // Release Ctrl modifier
+          blehid.keyRelease();
+        }
+      }
+      break;
+    default:
+      break;
 
-  // //left mouse button
-  // if (leftclick){
-  //   if (sense0 < 50){
-  //     leftclick = 0;
-  //     blehid.mouseButtonRelease(MOUSE_BUTTON_LEFT);
-  //   }
-  // }
-  // else{
-  //   if(sense0 > 50){
-  //     //Serial.println("click!: " + String(sensor0));
-  //     leftclick = 1;
-  //     blehid.mouseButtonPress(MOUSE_BUTTON_LEFT);
-  //   }
-  // }
+  }
 
-  // if (laser == 0){
-  //   if (sensor2 > 75){
-  //     laser = 1;
-  //     digitalWrite(A5, HIGH);  // Turn the pin on (set it HIGH)
-  //   }
-  // }
-  // else {
-  //   if (sensor2 < 75){
-  //     laser = 0;
-  //     digitalWrite(A5, LOW);   // Turn the pin off (set it LOW)
-  //   }
-  // }
-
-  // // Serial.print(_ekf.x[1]); Serial.print(",");
-  // // Serial.print(_ekf.x[3]); Serial.print(",");
-  // // Serial.print(gy); Serial.print(",");
-  // // Serial.print(gz); Serial.print(",");
-  // // // Serial.print(ax); Serial.print(",");
-  // // // Serial.print(_ekf.x[3]); Serial.print(",");
-  // // Serial.print(ay); Serial.print(",");
-  // // Serial.print(az); Serial.print(",");
-
-  // Serial.print(sense0);
-  // Serial.print(",");
-  // Serial.print(sense1);
-  // Serial.print(",");
-  // Serial.print(sense2);
-  // Serial.print(",");
-  // Serial.print(sense3);
-  // Serial.print(",");
-
-  // Serial.print("right state: ");
-  //  Serial.print(rightclick);
-  //  Serial.print(",");
-  //  //Serial.print("left state: ");
-  //  Serial.print(leftclick);
-  //  Serial.print(",");
-
-  // Serial.print(sensor0); //thumb
-  // Serial.print(",");
-
-  // Serial.print(sensor1); //pointer
-  // Serial.print(",");
-  // Serial.print(sensor2); //pinky
-
-  // Serial.print(",");
-  // Serial.print(sensor3); //thumb
-  // Serial.print(",");
-
-  // Serial.print(sensor4); //ring
-  // Serial.print(",");
-
-  // // Serial.print(vy); Serial.print(",");
-  // // Serial.print(vx); Serial.print(",");
-  // // Serial.print(ax); Serial.print(",");
-  // // Serial.print(ay); Serial.print(",");
-  // // Serial.print(az); Serial.println();
-  // // Serial.print(vy); Serial.print(",");
-  // // Serial.print(vx); Serial.print(",");
-  // Serial.print(curr / 1000.000);
-  // Serial.println();
 }
 
 void startAdv(void)
